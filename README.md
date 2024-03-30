@@ -16,9 +16,11 @@ you must check deleterule.json
 * day: REQUIRED NUMBER counts more than days
 * renoteCount: NUMBER if more than counts not remove
 * repliesCount: NUMBER if more than counts not remove
+* reactionCount: NUMBER if more than counts not remove
 * pinned: BOOLEAN if match to not remove
 * renote: BOOLEAN if match to not remove
 * reply: BOOLEAN if match to not remove
+* inChannel: BOOLEAN if match to not remove
 
 ### how to use
 run command, or entry your crontab.

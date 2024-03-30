@@ -8,7 +8,6 @@ from urllib import error, request
 
 from dotenv import dotenv_values
 
-
 # load configs from environment
 env = {
     **dotenv_values('.env'),
@@ -34,7 +33,7 @@ else:
 debuglevel = int(env['LM_DEBUGLEVEL'])
 handler = request.HTTPHandler(debuglevel)
 try:
-  import ssl
+  import ssl  # noqa: F401
   handler_s = request.HTTPSHandler(debuglevel)
   opener = request.build_opener(handler, handler_s)
 except ImportError:
@@ -92,13 +91,16 @@ def getNotesShow(note_id):
 
 
 def getUsersNotes(user_id, limit=100,
-                  include_replies=False, until_id=None, since_id=None):
+                  with_replies=False, with_renotes=False, with_channel_notes=False,
+                  until_id=None, since_id=None):
   '''POST Misskey API /users/notes'''
   targetUrl = '/users/notes'
   data = {
       'i': env['LM_API_TOKEN'],
       'limit': limit,
-      'includeReplies': include_replies,
+      'withReplies': with_replies,
+      'withRenotes': with_renotes,
+      'withChannelNotes': with_channel_notes,
       'untilId': until_id,
       'sinceId': since_id,
       'userId': user_id,
@@ -138,8 +140,8 @@ def getUserIdFromUserName(username: str) -> str:
   '''POST Misskey API /users/show'''
   targetUrl = '/users/show'
   data = {
-    'i': env['LM_API_TOKEN'],
-    'username': username,
+      'i': env['LM_API_TOKEN'],
+      'username': username,
   }
 
   result = __post_action(targetUrl, data)
@@ -147,7 +149,7 @@ def getUserIdFromUserName(username: str) -> str:
   return id
 
 
-def sleepseconds(sec)->None:
+def sleepseconds(sec) -> None:
   '''print to stderr with counting down'''
   logging.info(f'sleep {sec}sec')
   for t in range(1, sec):
@@ -158,7 +160,7 @@ def sleepseconds(sec)->None:
   handler.terminator = '\n'
 
 
-def net_runner(action: Callable, raise400=True, **kwargs)->None:
+def net_runner(action: Callable, raise400=True, **kwargs) -> None:
   '''net_runnner treatment your network operation for rate limits'''
   logging.debug('start net runner')
   limit_sec = 0

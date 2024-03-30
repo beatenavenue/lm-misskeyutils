@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta, timezone
 import json
 import logging
+import sys
+from datetime import datetime, timedelta, timezone
 
 import limitmanage
 
@@ -69,7 +70,8 @@ def step2(user_id):
   until_id = None
   while True:
     result_notes_raw = limitmanage.net_runner(limitmanage.getUsersNotes, **{
-        'user_id': user_id, 'until_id': until_id, 'include_replies': True})
+        'user_id': user_id, 'until_id': until_id,
+        'with_replies': True, 'with_renotes': True, 'with_channel_notes': True})
     result_notes = json.loads(result_notes_raw)
     all_notes += result_notes
 
@@ -98,26 +100,53 @@ def step3(all_notes, pinned_ids, config):
         if rule.get('pinned', False) and id in pinned_ids:
           logging.debug(f'skip: {id} is pinned at rule{days}')
           continue
+        else:
+          logging.debug(f'not match: {id} is pinned at rule{days}')
 
         if rule.get('renote', False) and note.get('renoteId', None) is not None:
           logging.debug(f'skip: {id} is renote at rule{days}')
+          logging.debug(f'  renoteId: {note.get('renoteId')}')
           continue
-        
+        else:
+          logging.debug(f'not match: {id} is renote at rule{days}')
+
         if rule.get('reply', False) and note.get('replyId', None) is not None:
           logging.debug(f'skip: {id} is reply at rule{days}')
+          logging.debug(f'  replyId: {note.get('replyId')}')
           continue
+        else:
+          logging.debug(f'not match: {id} is reply at rule{days}')
 
-        if rule.get('renoteCount', -1) <= note.get('renoteCount', 0):
+        if rule.get('inChannel', False) and note.get('channelId', None) is not None:
+          logging.debug(f'skip: {id} in channel at rule{days}')
+          logging.debug(f'  channelId: {note.get('channelId')}')
+          continue
+        else:
+          logging.debug(f'not match: {id} in channel at rule{days}')
+
+        if rule.get('renoteCount', sys.maxsize) <= note.get('renoteCount', 0):
           logging.debug(f'skip: {id} greater than renoteCount of rule{days}')
           continue
+        else:
+          logging.debug(f'not match: {id} greater than renoteCount of rule{days}')
+          logging.debug(f'  RULE renoteCount: {rule.get('renoteCount', sys.maxsize)}')
+          logging.debug(f'  NOTE renoteCount: {note.get('renoteCount', 0)}')
 
-        if rule.get('repliesCount', -1) <= note.get('repliesCount', 0):
+        if rule.get('repliesCount', sys.maxsize) <= note.get('repliesCount', 0):
           logging.debug(f'skip: {id} greater than repliesCount of rule{days}')
           continue
+        else:
+          logging.debug(f'not match: {id} greater than repliesCount of rule{days}')
+          logging.debug(f'  RULE repliesCount: {rule.get('repliesCount', sys.maxsize)}')
+          logging.debug(f'  NOTE repliesCount: {note.get('repliesCount', 0)}')
 
-        if rule.get('reactionsCount', -1) <= note.get('reactionsCount', 0):
-          logging.debug(f'skip: {id} greater than reactionsCount of rule{days}')
+        if rule.get('reactionCount', sys.maxsize) <= note.get('reactionCount', 0):
+          logging.debug(f'skip: {id} greater than reactionCount of rule{days}')
           continue
+        else:
+          logging.debug(f'not match: {id} greater than reactionCount of rule{days}')
+          logging.debug(f'  RULE reactionCount: {rule.get('reactionCount', sys.maxsize)}')
+          logging.debug(f'  NOTE reactionCount: {note.get('reactionCount', 0)}')
 
         logging.debug(f'add target {id} at rule{days}')
         delete_ids.append(id)
@@ -133,7 +162,7 @@ def step4(delete_ids):
   logging.info('step 4 delete notes')
   total = len(delete_ids)
   for i, id in enumerate(delete_ids):
-    logging.info(f'delete: {id} ({i+1}/{total})')
+    logging.info(f'delete: {id} ({i + 1}/{total})')
     limitmanage.net_runner(limitmanage.deleteNote, False, **{"note_id": id})
 
 

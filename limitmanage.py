@@ -34,7 +34,7 @@ else:
 debuglevel = int(env['LM_DEBUGLEVEL'])
 handler = request.HTTPHandler(debuglevel)
 try:
-  import ssl
+  import ssl  # noqa: F401
   handler_s = request.HTTPSHandler(debuglevel)
   opener = request.build_opener(handler, handler_s)
 except ImportError:
@@ -138,8 +138,8 @@ def getUserIdFromUserName(username: str) -> str:
   '''POST Misskey API /users/show'''
   targetUrl = '/users/show'
   data = {
-    'i': env['LM_API_TOKEN'],
-    'username': username,
+      'i': env['LM_API_TOKEN'],
+      'username': username,
   }
 
   result = __post_action(targetUrl, data)
@@ -220,7 +220,7 @@ def createFolder(name,
   return folder_id
 
 
-def sleepseconds(sec)->None:
+def sleepseconds(sec) -> None:
   '''print to stderr with counting down'''
   logging.info(f'sleep {sec}sec')
   for t in range(1, sec):
@@ -231,7 +231,7 @@ def sleepseconds(sec)->None:
   handler.terminator = '\n'
 
 
-def net_runner(action: Callable, raise400=True, wait=None, **kwargs)->None:
+def net_runner(action: Callable, raise400=True, wait=None, **kwargs) -> None:
   '''net_runnner treatment your network operation for rate limits'''
   logging.debug('start net runner')
   limit_sec = 0

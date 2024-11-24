@@ -29,4 +29,8 @@ pipenv run python days_expire.py
 ```
 
 ----------
+## mute_from_list.py
+create mutes from username list via limitmanage netrunner.
+
+----------
 MIT License

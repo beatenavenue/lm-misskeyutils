@@ -8,6 +8,7 @@ from urllib import error, request
 
 from dotenv import dotenv_values
 
+
 # load configs from environment
 env = {
     **dotenv_values('.env'),
@@ -91,16 +92,13 @@ def getNotesShow(note_id):
 
 
 def getUsersNotes(user_id, limit=100,
-                  with_replies=False, with_renotes=False, with_channel_notes=False,
-                  until_id=None, since_id=None):
+                  include_replies=False, until_id=None, since_id=None):
   '''POST Misskey API /users/notes'''
   targetUrl = '/users/notes'
   data = {
       'i': env['LM_API_TOKEN'],
       'limit': limit,
-      'withReplies': with_replies,
-      'withRenotes': with_renotes,
-      'withChannelNotes': with_channel_notes,
+      'includeReplies': include_replies,
       'untilId': until_id,
       'sinceId': since_id,
       'userId': user_id,
@@ -149,6 +147,79 @@ def getUserIdFromUserName(username: str) -> str:
   return id
 
 
+def getFile(limit=100,
+            folder_id=None, until_id=None, since_id=None, type=None):
+  '''POST Misskey API /drive/files'''
+  targetUrl = '/drive/files'
+  data = {
+      'i': env['LM_API_TOKEN'],
+      'limit': limit,
+      'folderId': folder_id,
+      'untilId': until_id,
+      'sinceId': since_id,
+      'type': type,
+  }
+  return __post_action(targetUrl, __remove_none_value_entry(data))
+
+
+def getFolder(limit=100,
+              folder_id=None, until_id=None, since_id=None):
+  '''POST Misskey API /drive/folders'''
+  targetUrl = '/drive/folders'
+  data = {
+      'i': env['LM_API_TOKEN'],
+      'limit': limit,
+      'folderId': folder_id,
+      'untilId': until_id,
+      'sinceId': since_id,
+  }
+  return __post_action(targetUrl, __remove_none_value_entry(data))
+
+
+def getAttachedNote(file_id,
+                    limit=10, until_id=None, since_id=None):
+  '''POST Misskey API /drive/files/attached-notes'''
+  targetUrl = '/drive/files/attached-notes'
+  data = {
+      'i': env['LM_API_TOKEN'],
+      'limit': limit,
+      'fileId': file_id,
+      'untilId': until_id,
+      'sinceId': since_id,
+  }
+  return __post_action(targetUrl, __remove_none_value_entry(data))
+
+
+def updateFile(file_id, folder_id=None, name=None,
+               is_sensitive=None, comment=None):
+  '''POST Misskey API /drive/files/update'''
+  targetUrl = '/drive/files/update'
+  data = {
+      'i': env['LM_API_TOKEN'],
+      'fileId': file_id,
+      'folderId': folder_id,
+      'name': name,
+      'isSensitive': is_sensitive,
+      'comment': comment
+  }
+
+  __post_action(targetUrl, __remove_none_value_entry(data))
+
+
+def createFolder(name,
+                 parent_id=None):
+  '''POST Misskey API /drive/folders/create'''
+  targetUrl = '/drive/folders/create'
+  data = {
+      'i': env['LM_API_TOKEN'],
+      'name': name,
+      'parentId': parent_id,
+  }
+  result = __post_action(targetUrl, __remove_none_value_entry(data))
+  folder_id = json.loads(result)['folderId']
+  return folder_id
+
+
 def sleepseconds(sec) -> None:
   '''print to stderr with counting down'''
   logging.info(f'sleep {sec}sec')
@@ -160,7 +231,7 @@ def sleepseconds(sec) -> None:
   handler.terminator = '\n'
 
 
-def net_runner(action: Callable, raise400=True, **kwargs) -> None:
+def net_runner(action: Callable, raise400=True, wait=None, **kwargs) -> None:
   '''net_runnner treatment your network operation for rate limits'''
   logging.debug('start net runner')
   limit_sec = 0
@@ -169,15 +240,15 @@ def net_runner(action: Callable, raise400=True, **kwargs) -> None:
       logging.debug(f'call: {action.__name__}')
       logging.debug('args: ' + str(kwargs))
       result = action(**kwargs)
-      sleepseconds(int(env['LM_POLL_BASE']))
+      sleepseconds(wait if wait is not None else int(env['LM_POLL_BASE']))
       return result
 
     except error.HTTPError as e:
       if e.code == 429:
         # Rate Limit
         logging.info('limit...')
-        limit_sec = limit_sec if limit_sec > 0 else int(env['LM_POLL_RATELIMIT_BASE'])
-        limit_sec += limit_sec
+        limit_sec += limit_sec if limit_sec > 0 else int(env['LM_POLL_RATELIMIT_BASE'])
+        # limit_sec += limit_sec
         limit_sec = min(limit_sec, int(env['LM_POLL_RATELIMIT_MAX']))
         sleepseconds(limit_sec)
 
@@ -187,7 +258,7 @@ def net_runner(action: Callable, raise400=True, **kwargs) -> None:
         else:
           # may be previous state is success but not responded
           logging.info('400 not exist? ')
-          sleepseconds(int(env['LM_POLL_BASE']))
+          sleepseconds(wait if wait is not None else int(env['LM_POLL_BASE']))
           break
 
       elif e.code < 500:

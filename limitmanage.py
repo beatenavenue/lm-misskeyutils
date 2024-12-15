@@ -134,15 +134,16 @@ def muteUser(user_id, expire=None):
   __post_action(targetUrl, data)
 
 
-def getUserIdFromUserName(username: str) -> str:
+def getUserIdFromUserName(username: str, host: str = None) -> str:
   '''POST Misskey API /users/show'''
   targetUrl = '/users/show'
   data = {
       'i': env['LM_API_TOKEN'],
       'username': username,
+      'host': host,
   }
 
-  result = __post_action(targetUrl, data)
+  result = __post_action(targetUrl, __remove_none_value_entry(data))
   id = json.loads(result)['id']
   return id
 

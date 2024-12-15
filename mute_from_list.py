@@ -7,7 +7,9 @@ def convert_userid_from_username(mute_names):
   result = []
   for i, name in enumerate(mute_names):
     print(f'find {name} ... ({i+1}/{total})')
-    id = limitmanage.net_runner(limitmanage.getUserIdFromUserName, False, 0, **{"username": name})
+    username = name if '@' not in name else name.split('@')[0]
+    host = None if '@' not in name else name.split('@')[1]
+    id = limitmanage.net_runner(limitmanage.getUserIdFromUserName, False, 0, **{"username": username, "host": host})
     print(f'username: {name} is {id} ({i+1}/{total})')
     result.append((name, id))
   return result

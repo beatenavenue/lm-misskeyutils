@@ -1,6 +1,10 @@
 # Project LimitManage for Misskey
 Yet another utils for Misskey
 
+## System require
+Python3.12 (Recommend Debian Trixie)  
+Pipenv
+
 ## setup
 * pipenv install
 * edit .env

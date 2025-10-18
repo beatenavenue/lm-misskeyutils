@@ -218,9 +218,17 @@ def step3(all_notes, pinned_ids, config):
 def step4(delete_ids):
   logging.info('step 4 delete notes')
   total = len(delete_ids)
+  success = 0
   for i, id in enumerate(delete_ids):
     logging.info(f'delete: {id} ({i + 1}/{total})')
-    limitmanage.net_runner(limitmanage.deleteNote, False, **{"note_id": id})
+    try:
+      result = limitmanage.net_runner(limitmanage.deleteNote, True, **{"note_id": id})
+      if result:
+        success += 1
+    except Exception as e:
+      logging.error(f'Error deleting {id}: {e}')
+
+  logging.info(f'delete complete: {success}, of {total} targets')
 
 
 def fake_step4(delete_ids):

@@ -3,10 +3,14 @@ import logging
 import os
 import sys
 import time
-from typing import Callable, Dict
+from collections.abc import MutableMapping
+from typing import Callable, Dict, Optional, TypeVar, ParamSpec
 from urllib import error, request
 
 from dotenv import dotenv_values
+
+P = ParamSpec('P')
+T = TypeVar('T')
 
 
 # load configs from environment
@@ -51,7 +55,7 @@ def __remove_none_value_entry(data: Dict):
   return {key: value for key, value in data.items() if value is not None}
 
 
-def __post_action(target_url, data):
+def __post_action(target_url: str, data: Dict, status_container: Optional[Dict] = None):
   '''Do POST to Misskey API'''
   req = request.Request(
       baseUrl + target_url,
@@ -61,10 +65,20 @@ def __post_action(target_url, data):
 
   try:
     with request.urlopen(req) as response:
+      code = response.getcode()
+      if isinstance(status_container, MutableMapping):
+        status_container['http_status'] = code
+    
       result = response.read().decode('utf-8')
       logging.debug(result)
       return result
 
+  except error.HTTPError as e:
+    if isinstance(status_container, MutableMapping):
+      status_container['http_status'] = e.code
+
+    logging.debug(e)
+    raise e
   except Exception as e:
     logging.debug(e)
     raise e
@@ -118,8 +132,11 @@ def deleteNote(note_id):
   '''POST Misskey API /notes/delete'''
   targetUrl = '/notes/delete'
   data = {'i': env['LM_API_TOKEN'], 'noteId': note_id}
+  state_info = {}
 
-  __post_action(targetUrl, data)
+  __post_action(targetUrl, data, state_info)
+
+  return True if state_info.get('http_status') == 204 else False
 
 
 def muteUser(user_id, expire=None):
@@ -232,7 +249,7 @@ def sleepseconds(sec) -> None:
   handler.terminator = '\n'
 
 
-def net_runner(action: Callable, raise400=True, wait=None, **kwargs) -> None:
+def net_runner(action: Callable[P, T], raise400=True, wait=None, **kwargs) -> Optional[T]:
   '''net_runnner treatment your network operation for rate limits'''
   logging.debug('start net runner')
   limit_sec = 0

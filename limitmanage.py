@@ -272,6 +272,8 @@ def net_runner(action: Callable[P, T], raise400=True, wait=None, **kwargs) -> Op
 
       elif e.code == 400:
         if raise400:
+          logging.info('400 not exist? Raise to abort.')
+          sleepseconds(int(env['LM_POLL_BASE']))
           raise e
         else:
           # may be previous state is success but not responded

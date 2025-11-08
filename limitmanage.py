@@ -160,6 +160,17 @@ def muteUser(user_id, expire=None):
   __post_action(targetUrl, data)
 
 
+def blockUser(user_id):
+  '''POST Misskey API /blocking/create'''
+  targetUrl = '/blocking/create'
+  data = {
+      'i': env['LM_API_TOKEN'],
+      'userId': user_id,
+  }
+
+  __post_action(targetUrl, data)
+
+
 def getUserIdFromUserName(username: str, host: str = None) -> str:
   '''POST Misskey API /users/show'''
   targetUrl = '/users/show'

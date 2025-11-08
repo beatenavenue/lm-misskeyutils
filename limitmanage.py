@@ -23,12 +23,21 @@ env = {
 log_format = '%(asctime)s %(levelname)-8s %(message)s'
 date_format = '%Y-%m-%d %H:%M:%S'
 if env.get('LM_LOGFILE', 'False').upper() == 'TRUE':
+  # Configure basic file logging
   logging.basicConfig(
       filename=env.get('LM_LOGFILENAME', 'limitmanage.log'),
       level=getattr(logging, env['LM_LOGLEVEL'], logging.INFO),
       format=log_format,
       datefmt=date_format)
+  # Also add a console (stream) handler so logs are visible on stderr/stdout
+  # TODO: これでログファイルとコンソール両方に出せるそうだが、FILE, CONSOLE, BOTH みたいな選択式にしたいよね
+  console_handler = logging.StreamHandler()
+  console_handler.setLevel(getattr(logging, env['LM_LOGLEVEL'], logging.INFO))
+  console_formatter = logging.Formatter(fmt=log_format, datefmt=date_format)
+  console_handler.setFormatter(console_formatter)
+  logging.getLogger().addHandler(console_handler)
 else:
+  # No file: use basic config to output to console
   logging.basicConfig(
       level=getattr(logging, env['LM_LOGLEVEL'], logging.INFO),
       format=log_format,

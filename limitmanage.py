@@ -295,11 +295,11 @@ def net_runner(action: Callable[P, T], raise400=True, wait=None, **kwargs) -> Op
               logging.warning(f'invalid Retry-After header: {header_value}')
 
         if retry_after is not None:
-          logging.info('409 rate limit with Retry-After seconds')
+          logging.info('429 rate limit with Retry-After seconds')
           sleepseconds(retry_after + int(env['LM_POLL_BASE']))
           continue
 
-        logging.info('409 rate limit without retry information (use backoff strategy)')
+        logging.info('429 rate limit without retry information (use backoff strategy)')
         limit_sec += limit_sec if limit_sec > 0 else int(env['LM_POLL_RATELIMIT_BASE'])
         # limit_sec += limit_sec
         limit_sec = min(limit_sec, int(env['LM_POLL_RATELIMIT_MAX']))

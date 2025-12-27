@@ -1,10 +1,12 @@
 import json
 import logging
 import os
+import re
 import sys
 import time
 from collections.abc import MutableMapping
-from typing import Callable, Dict, Optional, TypeVar, ParamSpec
+from datetime import datetime, timedelta, timezone
+from typing import Callable, Dict, Optional, ParamSpec, TypeVar
 from urllib import error, request
 
 from dotenv import dotenv_values
@@ -59,6 +61,54 @@ request.install_opener(opener)
 baseUrl = env['LM_BASE_URL']
 
 
+def _get_log_timezone() -> timezone:
+  """Return tzinfo based on `LM_LOG_TIMEZONE` environment value.
+
+  Resolution order:
+  - zoneinfo.ZoneInfo(name)
+  - dateutil.tz.gettz(name)
+  - parse fixed offset like +09:00
+  - fallback to UTC
+  """
+  name = env.get('LM_LOG_TIMEZONE')
+  if not name:
+    return timezone.utc
+
+  # Try zoneinfo (Python 3.9+)
+  try:
+    from zoneinfo import ZoneInfo  # type: ignore
+    try:
+      return ZoneInfo(name)
+    except Exception:
+      pass
+  except Exception:
+    pass
+
+  # Try dateutil as a fallback
+  try:
+    from dateutil import tz as dateutil_tz  # type: ignore
+    tzobj = dateutil_tz.gettz(name)
+    if tzobj is not None:
+      return tzobj
+  except Exception:
+    pass
+
+  # Parse fixed offset like +09:00 or -0530
+  m = re.match(r'^([+-])(\d{1,2})(?::?(\d{2}))?$', name)
+  if m:
+    sign = 1 if m.group(1) == '+' else -1
+    hours = int(m.group(2))
+    minutes = int(m.group(3) or 0)
+    return timezone(timedelta(hours=sign * hours, minutes=sign * minutes))
+
+  logging.warning(f'Invalid LM_LOG_TIMEZONE={name!r}, falling back to UTC')
+  return timezone.utc
+
+
+# Logging timezone (configurable via LM_LOG_TIMEZONE, fallback UTC)
+LOG_TZ = _get_log_timezone()
+
+
 def __remove_none_value_entry(data: Dict):
   '''remove none entry (compatible js undefined)'''
   return {key: value for key, value in data.items() if value is not None}
@@ -77,7 +127,7 @@ def __post_action(target_url: str, data: Dict, status_container: Optional[Dict] 
       code = response.getcode()
       if isinstance(status_container, MutableMapping):
         status_container['http_status'] = code
-    
+
       result = response.read().decode('utf-8')
       logging.debug(result)
       return result
@@ -285,6 +335,23 @@ def net_runner(action: Callable[P, T], raise400=True, wait=None, **kwargs) -> Op
       if e.code == 429:
         # Rate Limit
         logging.info('limit...')
+
+        reset_epoch = None
+        try:
+          body = e.read()
+          if body:
+            payload = json.loads(body.decode('utf-8'))
+            reset_epoch = payload.get('error', {}).get('info', {}).get('reset')
+        except Exception as parse_error:
+          logging.debug(f'failed to parse 429 body: {parse_error}')
+
+        if reset_epoch is not None:
+          try:
+            reset_time = datetime.fromtimestamp(float(reset_epoch), tz=LOG_TZ).isoformat()
+            logging.info(f'rate limit resets at {reset_time} (epoch: {reset_epoch})')
+          except Exception:
+            logging.info(f'rate limit resets at epoch: {reset_epoch}')
+
         retry_after = None
         if hasattr(e, 'headers') and e.headers is not None:
           header_value = e.headers.get('Retry-After')
@@ -295,7 +362,7 @@ def net_runner(action: Callable[P, T], raise400=True, wait=None, **kwargs) -> Op
               logging.warning(f'invalid Retry-After header: {header_value}')
 
         if retry_after is not None:
-          logging.info('429 rate limit with Retry-After seconds')
+          logging.info(f'429 rate limit with Retry-After seconds ({retry_after} + POLL_BASE)')
           sleepseconds(retry_after + int(env['LM_POLL_BASE']))
           continue
 

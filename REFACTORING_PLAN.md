@@ -369,6 +369,24 @@ export function createClient(opts: { origin; token; retry: RetryPolicy; fetch?; 
 - 実サーバー検証は Phase 3 の dry-run 比較を正とし、削除系は比較が一致するまで実行しない。
 - CI では実サーバーに接続しない。
 
+### 6.1 備考: サーバーの API 定義と misskey-js の突き合わせスクリプト
+
+misskey-js の型は本家（misskey-dev/misskey）の OpenAPI 定義から生成されており、本家のバージョンに追従する。
+一方、misskey.io は本家からフォークして久しく、API に独自差分がある。本ツールは本家対応を優先するが io も無視できないため、
+移行後の考慮事項として次のスクリプトを追加する（Phase 3 以降の任意タスク。本計画の完了条件には含めない）。
+
+- Misskey サーバーは自身の OpenAPI 定義を `GET /api.json` で配布している（`/api-doc` で閲覧できるものと同じ）。フォークも同様に配布していることが多い。
+- スクリプト（例: `scripts/check-api-compat.ts`、`pnpm check-api -- https://misskey.io`）は、対象サーバーの `api.json` を取得し、
+  **本ツールが使う 6 エンドポイント**（`i`, `users/notes`, `notes/delete`, `users/show`, `mute/create`, `blocking/create`）について、
+  misskey-js の `Endpoints[E]['req']` / `['res']` に対応する型情報と、リクエストパラメータ名・応答で参照するフィールド名
+  （`id`, `createdAt`, `renoteId`, `replyId`, `channelId`, `renoteCount`, `repliesCount`, `reactionCount`, `pinnedNotes`）の有無を比較して差分を表示する。
+- 全エンドポイントの完全比較はしない。ツールが依存する範囲に限定することで、フォーク差分のうち実害のあるものだけを検出する。
+- 型と実サーバーの照合は tsc ではできない（型はコンパイル時、サーバー定義は実行時）ため、misskey-js の `autogen/types.d.ts` を読むのではなく、
+  本家の `api.json` を misskey-js と同じバージョンの本家サーバーから取得して比較する、または本ツール側で使用パラメータ名を定数として列挙し
+  それをサーバー定義と照合する方式にする。後者の方が実装が簡潔で、misskey-js 更新時のパラメータ名変更も同じ定数で追える。
+- `POST /api/meta` の `version` もあわせて表示し、報告や切り分けに使えるようにする。
+- 現在の運用先（io）と本家バニラのインスタンスの両方で実行し、結果を README か本ドキュメントに記録する。
+
 ## 7. 実施セッションへの指示
 
 - 本ドキュメントの Phase を 1 つずつ、それぞれ別ブランチ・別 PR で進める。ブランチ名は `ts/phase-N-<topic>`。

@@ -57,7 +57,7 @@
 | エンドポイント | 用途 | 呼び出し元 |
 |---|---|---|
 | `i` | 自分の userId と `pinnedNotes` を取得 | days_expire step1 |
-| `users/notes` | 自分の全ノートを `untilId` でページング列挙（`limit: 100`, `includeReplies: true`） | days_expire step2 |
+| `users/notes` | 自分の全ノートを `untilId` でページング列挙（`limit: 100`, `includeReplies: true`）。**注意**: 現行 Misskey のパラメータは `withReplies` / `withRenotes` / `withChannelNotes` であり `includeReplies` は存在しない（misskey-js の型で確認済み）。詳細は 2.8 | days_expire step2 |
 | `notes/delete` | ノート削除。成功は HTTP 204 | days_expire step4 |
 | `users/show` | `username` + `host` から userId を解決 | mute/block |
 | `mute/create` / `blocking/create` | ミュート / ブロック | mute/block |
@@ -121,6 +121,17 @@
 - `@name@host`（先頭 @ 付き）は現行では正しく解析できない（`split('@')` の先頭要素が空になる）。移植版は先頭 `@` を許容する。
 - userId 解決は `wait=0`、`raise400=False`（解決できないユーザーは `id` が `None` のまま続行）。
 - ミュート / ブロック実行は `raise400=False`（既に実施済みでも成功扱い）。`expiresAt` は現行では常に null（無期限）。
+
+### 2.8 `users/notes` のパラメータ名不一致（移植時に要対応）
+
+- Python 版は `users/notes` に `includeReplies: true` を送っているが、現行 Misskey の `users/notes` にこのパラメータは無く、
+  `withReplies` / `withRenotes` / `withChannelNotes` / `withFiles` である（misskey-js 2026.7.0 の型定義で確認。`includeReplies` を渡すと tsc がエラーにする）。
+- Misskey は未知のパラメータを無視するため、現行では **リプライが列挙されていない** 可能性が高い。さらに `withChannelNotes` の既定は false のため、
+  チャンネル投稿も列挙されていない可能性がある（既定値は Misskey 実装で要確認）。
+- `days_expire.py` 冒頭の「API がノートを取りこぼすことがあるのでエクスポート JSON とマージする」（2.5）は、この取りこぼしへの対症療法だった可能性がある。
+- 移植版は `withReplies: true, withRenotes: true, withChannelNotes: true` を明示して列挙する。Phase 3 の同等性確認で
+  「API 列挙だけで全ノートが揃うか」を件数で検証し、揃うならエクスポートマージを廃止候補にする（未決事項 7）。
+- この件は misskey-js の型定義があったからこそ検出できた。Phase 2 以降、API 呼び出しは必ず型付きの `client.request()` を通す。
 
 ### 2.7 設定値（`.env`）
 
@@ -375,6 +386,7 @@ export function createClient(opts: { origin; token; retry: RetryPolicy; fetch?; 
 | 4 | `mute/create` の `expiresAt` を CLI オプションで指定可能にするか | 現行は常に無期限。必要になったら追加 |
 | 5 | ログライブラリ（pino 等）を入れるか | 入れない。コンソール + ファイルの自前実装で足りる規模 |
 | 6 | Web パッケージのフレームワーク | スコープ外 |
+| 7 | `withReplies` / `withChannelNotes` を明示した列挙で全ノートが揃う場合、エクスポート JSON マージ（2.5）を廃止するか | Phase 3 の同等性確認で API 列挙件数とエクスポート件数を比較して判断。揃うなら廃止し、コードと `exported_files/` を削除する |
 
 ## 9. 旧計画からの変更点
 
@@ -382,6 +394,7 @@ export function createClient(opts: { origin; token; retry: RetryPolicy; fetch?; 
 - 旧計画の現状分析で挙げた問題（import 時副作用、camelCase、重複、コメントアウト式 dry-run、テスト・CI 不在、トークン露出）は、
   新構成では設計上発生しない形で解消する。
 - 旧計画に無かった発見を 2 章に追加した: 未使用 API 関数 7 つ、`websockets` 未使用、`getI` がリトライ非経由、接続エラーが再試行されない、
-  `sleepseconds` の 1 秒不足、`reactionCount` バグがノート側にもあること、エクスポートマージの意味論、`@name@host` の解析不良。
+  `sleepseconds` の 1 秒不足、`reactionCount` バグがノート側にもあること、エクスポートマージの意味論、`@name@host` の解析不良、
+  `users/notes` の `includeReplies` が現行 API に存在しないこと（2.8）。
 - 旧計画は「テスト整備」が Stage 6 と最後だったが、新計画では Phase 0 でゴールデンデータを作り、Phase 2 でテストと実装を同時に入れる。
 - バックオフ戦略は「不要になった」のではなく「フォールバックに格下げ」とし、機構は残す。

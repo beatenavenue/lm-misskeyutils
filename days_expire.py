@@ -44,7 +44,7 @@ def is_valid_config(config_data):
     if not key_type_is(entry, 'repliesCount', int):
       return False
 
-    if not key_type_is(entry, 'reactionsCount', int):
+    if not key_type_is(entry, 'reactionCount', int):
       return False
 
     if not key_type_is(entry, 'pinned', bool):
@@ -196,14 +196,14 @@ def step3(all_notes, pinned_ids, config):
           logging.debug(f'  RULE repliesCount: {rule.get("repliesCount", sys.maxsize)}')
           logging.debug(f'  NOTE repliesCount: {note.get("repliesCount", 0)}')
 
-        # config uses 'reactionsCount' (plural). Use that key consistently.
-        if rule.get('reactionsCount', sys.maxsize) <= note.get('reactionsCount', 0):
-          logging.debug(f'skip: {id} greater than reactionsCount of rule{days}')
+        # rule and note both use 'reactionCount' (deleterule.json, README, Misskey Note).
+        if rule.get('reactionCount', sys.maxsize) <= note.get('reactionCount', 0):
+          logging.debug(f'skip: {id} greater than reactionCount of rule{days}')
           continue
         else:
-          logging.debug(f'not match: {id} greater than reactionsCount of rule{days}')
-          logging.debug(f'  RULE reactionsCount: {rule.get("reactionsCount", sys.maxsize)}')
-          logging.debug(f'  NOTE reactionsCount: {note.get("reactionsCount", 0)}')
+          logging.debug(f'not match: {id} greater than reactionCount of rule{days}')
+          logging.debug(f'  RULE reactionCount: {rule.get("reactionCount", sys.maxsize)}')
+          logging.debug(f'  NOTE reactionCount: {note.get("reactionCount", 0)}')
 
         logging.debug(f'add target {id} at rule{days}')
         delete_ids.append(id)

@@ -1,0 +1,23 @@
+[
+  {
+    "day": 180,
+    "pinned": true
+  },
+  {
+    "day": 30,
+    "renoteCount": 2,
+    "repliesCount": 2,
+    "reactionCount": 2,
+    "pinned": true,
+    "renote": true,
+    "reply": true,
+    "inChannel": true
+  },
+  {
+    "day": 60,
+    "renoteCount": 5,
+    "repliesCount": 5,
+    "reactionCount": 5,
+    "pinned": true
+  }
+]

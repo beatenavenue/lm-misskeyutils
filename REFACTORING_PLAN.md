@@ -14,7 +14,7 @@
 | Phase | 状態 | 備考 |
 |---|---|---|
 | 0 凍結と準備 | 完了 | `days_expire.py` に `reactionCount` 最小パッチ。タグ `python-final` は**ローカル作成のみ**（別 ref への push 権限がないため）→ `git push origin python-final` が必要。ゴールデンデータ `packages/core/test/fixtures/evaluate-rules/`（160 ノート、由来は同ディレクトリの README） |
-| 1 モノレポ骨格 | 完了 | pnpm workspace、`tsc -b`、Biome、vitest、GitHub Actions。core の制約（3.2）は Biome の `noNodejsModules` / `noRestrictedGlobals` と、`Date.now()` 等を検査するテスト（`packages/core/test/constraints.test.ts`）で機械検査 |
+| 1 モノレポ骨格 | 完了 | pnpm workspace、`tsc -b`、Biome、vitest。GitHub Actions のワークフローは push 資格情報に `workflow` スコープが無く `.github/workflows/` へ置けなかったため `ci/github-workflow-ci.yml` に置いてある（`ci/README.md` の手順で移動して有効化する）。core の制約（3.2）は Biome の `noNodejsModules` / `noRestrictedGlobals` と、`Date.now()` 等を検査するテスト（`packages/core/test/constraints.test.ts`）で機械検査 |
 | 2 core 実装 | 完了 | 全モジュールをテスト付きで実装（109 テスト、ゴールデンデータ一致を確認） |
 | 3 CLI 実装 | **実装は完了、実サーバーでの同等性確認は未実施** | このセッションからは実サーバーに接続できない。手順は 4.3 のとおり: 同一アカウント・同一 `deleterule.json` で Python 版（`fake_step4` 有効化）と `node packages/cli/dist/main.js days-expire --dry-run` を実行し、削除候補 id 集合を比較する。ローカルの偽 Misskey サーバー（429 + Retry-After、削除時 400、未知ユーザー）に対する疎通確認は実施済み |
 | 4 切り替えと Python 削除 | **未着手（Phase 3 の同等性確認がブロッカー）** | `.env.example` は 5.1 に合わせて更新済み。README の全面更新と `*.py` / `Pipfile` / `setup.cfg` の削除は同等性確認後に行う |

@@ -1,0 +1,26 @@
+{
+  "name": "@lm/cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "lm-misskeyutils command line interface (Node)",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "lm": "./dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@lm/core": "workspace:*",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.13"
+  }
+}

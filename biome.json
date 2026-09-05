@@ -1,0 +1,45 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": ["**", "!**/dist", "!**/node_modules", "!packages/core/test/fixtures/**/*.json"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": { "quoteStyle": "single" }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": { "recommended": true }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/core/src/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "error"
+          },
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "process": "core must not read the environment; take configuration as arguments (plan §3.2)",
+                  "console": "core must log through the Logger port (plan §3.2)",
+                  "setTimeout": "core must wait through the Sleep port (plan §3.2)",
+                  "setInterval": "core must wait through the Sleep port (plan §3.2)"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

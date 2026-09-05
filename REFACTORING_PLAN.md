@@ -7,6 +7,29 @@
 旧計画（Python のまま 7 ステージでリファクタリングする案）は本ドキュメントで置き換える。旧計画の現状分析は事実として正しかったが、
 前提が以下のとおり変わったため実行しない。差分は末尾「旧計画からの変更点」を参照。
 
+## 0. 進捗（2026-09-05 時点）
+
+`refactoring` ブランチ上で Phase ごとに 1 コミットとして実施した（セッションの制約により `ts/phase-N-<topic>` ブランチ・個別 PR ではなく単一ブランチに積んでいる。PR 分割が必要なら各コミットを cherry-pick する）。
+
+| Phase | 状態 | 備考 |
+|---|---|---|
+| 0 凍結と準備 | 完了 | `days_expire.py` に `reactionCount` 最小パッチ。タグ `python-final` は**ローカル作成のみ**（別 ref への push 権限がないため）→ `git push origin python-final` が必要。ゴールデンデータ `packages/core/test/fixtures/evaluate-rules/`（160 ノート、由来は同ディレクトリの README） |
+| 1 モノレポ骨格 | 完了 | pnpm workspace、`tsc -b`、Biome、vitest、GitHub Actions。core の制約（3.2）は Biome の `noNodejsModules` / `noRestrictedGlobals` と、`Date.now()` 等を検査するテスト（`packages/core/test/constraints.test.ts`）で機械検査 |
+| 2 core 実装 | 完了 | 全モジュールをテスト付きで実装（109 テスト、ゴールデンデータ一致を確認） |
+| 3 CLI 実装 | **実装は完了、実サーバーでの同等性確認は未実施** | このセッションからは実サーバーに接続できない。手順は 4.3 のとおり: 同一アカウント・同一 `deleterule.json` で Python 版（`fake_step4` 有効化）と `node packages/cli/dist/main.js days-expire --dry-run` を実行し、削除候補 id 集合を比較する。ローカルの偽 Misskey サーバー（429 + Retry-After、削除時 400、未知ユーザー）に対する疎通確認は実施済み |
+| 4 切り替えと Python 削除 | **未着手（Phase 3 の同等性確認がブロッカー）** | `.env.example` は 5.1 に合わせて更新済み。README の全面更新と `*.py` / `Pipfile` / `setup.cfg` の削除は同等性確認後に行う |
+| 5 Web | スコープ外 | |
+
+### 実装中に決めたこと（計画からの差分）
+
+- **429 の `reset` 単位（未決事項 1）**: 両対応の判定を入れた。優先順は `Retry-After` ヘッダ → `error.info.resetSec`（相対秒）→ `error.info.resetMs`（相対ミリ秒）→ `error.info.reset`（1e12 超なら epoch ミリ秒、1e9 超なら epoch 秒、それ以外は相対秒）。実サーバーのログで単位が確定したら `rateLimitWaitSeconds` を単純化してよい。
+- **400 の判別方法**: misskey-js の `APIClient` は HTTP ステータスを呼び出し側に渡さないため、`withRetry` が 4xx 応答の `error` に `httpStatus` を付与して返す。フローは `getHttpStatus(err) === 400` で判定する。
+- **削除時のエラー扱い**: 400 に限らず API エラーは 1 件ずつログして続行（Python 版と同じ）。リトライ上限超過と中断（AbortSignal）は処理を止める。
+- **mute / block にも `--dry-run`** を付けた（書き込み系コマンドは全て dry-run 可能にする方針の延長）。
+- **`.env` 指定オプションは `--dotenv <path>`**: `--env-file` は Node 自身がスクリプト引数からも横取りする（`node main.js --env-file x` が Node のオプションとして解釈される）ため。
+- **`pollBase` の呼び出し単位上書き**: `RetryPolicy.pollBaseOverrides`（既定 `{ 'users/show': 0 }`）としてエンドポイント単位で指定する。
+- 6.1 の API 定義突き合わせスクリプトは任意タスクのため未実施。
+
 ## 1. 背景と方針決定
 
 ### 1.1 プロジェクトの経緯
@@ -398,7 +421,7 @@ misskey-js の型は本家（misskey-dev/misskey）の OpenAPI 定義から生�
 
 | # | 内容 | 現時点の扱い |
 |---|---|---|
-| 1 | 429 本体 `error.info.reset` の単位が epoch 秒か相対秒か | Python 版は epoch 秒として日時変換していた。Phase 2 で実サーバーの 429 応答をログから確認し、両方に対応する判定（値が現在時刻より大きければ epoch）を入れるか決める |
+| 1 | 429 本体 `error.info.reset` の単位が epoch 秒か相対秒か | **暫定解決**: 両対応の判定を実装した（0 章「実装中に決めたこと」参照）。実サーバーの 429 応答をログで確認したら単純化する |
 | 2 | エクスポートにしかないノートがカウント条件で保護されない件（2.5） | 現行踏襲。件数を警告ログに出す。将来 `notes/show` で補完するかは別途判断 |
 | 3 | `--dry-run` を既定にして実行時に `--execute` を必須にするか | 現行互換を優先し既定は実行。安全側に倒すなら Phase 4 の README 更新時に再検討 |
 | 4 | `mute/create` の `expiresAt` を CLI オプションで指定可能にするか | 現行は常に無期限。必要になったら追加 |

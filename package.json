@@ -1,0 +1,32 @@
+{
+  "name": "lm-misskeyutils",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Limit Manage utilities for Misskey (pnpm workspace)",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo",
+    "lm": "node packages/cli/dist/main.js"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.12",
+    "@types/node": "^22.20.1",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

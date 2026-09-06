@@ -1,0 +1,24 @@
+{
+  "name": "@lm/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Environment-independent logic shared by the lm-misskeyutils CLI and (later) the web package",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "misskey-js": "2026.7.0",
+    "zod": "^4.5.4"
+  }
+}

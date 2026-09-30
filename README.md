@@ -3,10 +3,10 @@ Yet another utils for Misskey
 
 ## System require
 Python3.12 (Recommend Debian Trixie)  
-Pipenv
+[uv](https://docs.astral.sh/uv/)
 
 ## setup
-* pipenv install
+* uv sync
 * edit .env
     * set your server to LM_BASE_URL
     * set your token to LM_API_TOKEN ([see](https://misskey-hub.net/docs/api/))
@@ -29,7 +29,7 @@ you must check deleterule.json
 ### how to use
 run command, or entry your crontab.
 ```
-pipenv run python days_expire.py
+uv run days_expire.py
 ```
 
 ----------
